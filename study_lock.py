@@ -11,8 +11,6 @@ import win32con
 from PIL import Image, ImageTk
 import base64
 import io
-import urllib.request
-from urllib.parse import urlparse
 
 # pip install -r requirements.txt
 # python study_lock.py
@@ -36,7 +34,7 @@ class StudyLock:
             {
                 "question": "2+2",
                 "answer": "4",
-                "image": "https://placeholdit.com/600x400",
+                "image": None,
                 "alert": "The answer is 4"
             }
         ]
@@ -68,93 +66,66 @@ class StudyLock:
         """Get random question"""
         return random.choice(self.questions)
     
-    def download_image_from_url(self, url):
-        """Download image from URL and return base64 encoded string"""
-        try:
-            parsed_url = urlparse(url)
-            if not parsed_url.scheme:
-                raise ValueError("Invalid URL format")
-            
-            with urllib.request.urlopen(url, timeout=10) as response:
-                img_data = response.read()
-                content_type = response.headers.get('Content-Type', '')
-                ext = content_type.split('/')[-1] if '/' in content_type else 'jpeg'
-                
-                base64_str = base64.b64encode(img_data).decode('utf-8')
-                return f"data:image/{ext};base64,{base64_str}"
-        except Exception as e:
-            print(f"Error downloading image from URL: {e}")
-            return None
-    
-    def load_image_data(self, image_input):
-        """Load image from file path, URL, or base64 string"""
-        if not image_input:
+    def load_image_from_file(self, image_path):
+        """Load image from file and return base64 encoded string"""
+        if not image_path or not os.path.exists(image_path):
             return None
         
         try:
-            # Check if it's a URL
-            if image_input.startswith(('http://', 'https://')):
-                return self.download_image_from_url(image_input)
-            
-            # Check if it's a file path
-            if os.path.exists(image_input):
-                with open(image_input, 'rb') as img_file:
-                    img_data = img_file.read()
-                    ext = os.path.splitext(image_input)[1].lower()
-                    mime_type = {
-                        '.jpg': 'jpeg',
-                        '.jpeg': 'jpeg', 
-                        '.png': 'png',
-                        '.gif': 'gif',
-                        '.bmp': 'bmp',
-                        '.webp': 'webp'
-                    }.get(ext, 'jpeg')
-                    
-                    base64_str = base64.b64encode(img_data).decode('utf-8')
-                    return f"data:image/{mime_type};base64,{base64_str}"
-            
-            # Check if it's already a base64 string
-            if image_input.startswith('data:image') or len(image_input) > 100:
-                return image_input
-            
-            return None
+            with open(image_path, 'rb') as img_file:
+                img_data = img_file.read()
+                ext = os.path.splitext(image_path)[1].lower()
+                mime_type = {
+                    '.jpg': 'jpeg',
+                    '.jpeg': 'jpeg', 
+                    '.png': 'png',
+                    '.gif': 'gif',
+                    '.bmp': 'bmp',
+                    '.webp': 'webp'
+                }.get(ext, 'jpeg')
+                
+                base64_str = base64.b64encode(img_data).decode('utf-8')
+                return f"data:image/{mime_type};base64,{base64_str}"
         except Exception as e:
-            print(f"Error loading image: {e}")
+            print(f"Error loading image from file: {e}")
             return None
     
     def load_image(self, image_data, max_width=800, max_height=600):
-        """Load image with scaling"""
+        """Load image from file path or base64 string"""
         if not image_data:
             return None
             
         try:
             img = None
             
-            # If it's a file path
             if isinstance(image_data, str):
+                # Check if it's a file path
                 if os.path.exists(image_data):
                     img = Image.open(image_data)
-                # If it's a base64 string
+                    print(f"✅ Image loaded from file: {image_data}")
+                # Check if it's a base64 string
                 elif image_data.startswith('data:image') or len(image_data) > 100:
                     try:
                         if ',' in image_data:
                             image_data = image_data.split(',')[1]
                         img_data = base64.b64decode(image_data)
                         img = Image.open(io.BytesIO(img_data))
-                    except:
+                        print(f"✅ Image loaded from base64")
+                    except Exception as e:
+                        print(f"❌ Failed to load base64 image: {e}")
                         return None
+                else:
+                    print(f"❌ Image file not found: {image_data}")
+                    return None
             
             if img:
                 # Scale image while maintaining aspect ratio
                 img_width, img_height = img.size
                 
-                # Calculate new dimensions
                 if img_width > max_width or img_height > max_height:
                     ratio = min(max_width / img_width, max_height / img_height)
                     new_width = int(img_width * ratio)
                     new_height = int(img_height * ratio)
-                    
-                    # Use high-quality scaling
                     img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                 
                 return ImageTk.PhotoImage(img)
@@ -303,14 +274,12 @@ class StudyLock:
             # Run Tkinter main loop for this window
             self.lock_window.mainloop()
     
-    def add_question_with_image(self, question, answer, image_path=None, image_url=None, alert=None):
-        """Add question with image from file or URL"""
+    def add_question_with_image(self, question, answer, image_path=None, alert=None):
+        """Add question with image from file"""
         image_data = None
         
         if image_path:
-            image_data = self.load_image_data(image_path)
-        elif image_url:
-            image_data = self.load_image_data(image_url)
+            image_data = self.load_image_from_file(image_path)
         
         self.questions.append({
             "question": question,
@@ -320,8 +289,8 @@ class StudyLock:
         })
         self.save_questions()
         print(f"Added new question: {question}")
-        if image_path or image_url:
-            print(f"Image added: {image_path or image_url}")
+        if image_path:
+            print(f"Image added: {image_path}")
         if alert:
             print(f"Alert added: {alert}")
     
@@ -419,6 +388,24 @@ def auto_start_with_test(minutes=30):
     
     lock = StudyLock(lock_time=minutes * 60)
     
+    # ✅ ГАРАНТИРУЕМ, что используем questions.json
+    if os.path.exists("questions.json"):
+        try:
+            with open("questions.json", 'r', encoding='utf-8') as f:
+                loaded = json.load(f)
+                if loaded and len(loaded) > 0:
+                    lock.questions = loaded
+                    print(f"✅ Loaded {len(loaded)} questions from questions.json")
+                else:
+                    print("⚠️ questions.json is empty, using default question")
+                    lock.add_question("1+1", "2", alert="The answer is 2!")
+        except Exception as e:
+            print(f"⚠️ Error loading questions.json: {e}")
+            lock.add_question("1+1", "2", alert="The answer is 2!")
+    else:
+        print("⚠️ questions.json not found, creating default question")
+        lock.add_question("1+1", "2", alert="The answer is 2!")
+    
     # Start timer
     lock.start_timer()
     
@@ -454,7 +441,7 @@ def main():
             print("1. Start lock (with test lock)")
             print("2. Start lock")
             print("3. Add question without image")
-            print("4. Add question with image (file or URL)")
+            print("4. Add question with image (file only)")
             print("5. Remove question")
             print("6. Show all questions")
             print("7. Change interval (in minutes)")
@@ -546,30 +533,14 @@ def main():
                 if not alert:
                     alert = None
                 
-                print("Add image from:")
-                print("1. File path")
-                print("2. URL")
-                image_choice = input("Choose option (1-2, Enter to skip): ").strip()
-                
-                if image_choice == "1":
+                if question and answer:
                     image_path = input("Enter image file path: ").strip()
-                    if question and answer:
-                        if image_path:
-                            lock.add_question_with_image(question, answer, image_path=image_path, alert=alert)
-                        else:
-                            lock.add_question(question, answer, alert)
-                elif image_choice == "2":
-                    image_url = input("Enter image URL: ").strip()
-                    if question and answer:
-                        if image_url:
-                            lock.add_question_with_image(question, answer, image_url=image_url, alert=alert)
-                        else:
-                            lock.add_question(question, answer, alert)
-                else:
-                    if question and answer:
-                        lock.add_question(question, answer, alert)
+                    if image_path:
+                        lock.add_question_with_image(question, answer, image_path=image_path, alert=alert)
                     else:
-                        print("Question and answer cannot be empty!")
+                        lock.add_question(question, answer, alert)
+                else:
+                    print("Question and answer cannot be empty!")
                     
             elif choice == "5":
                 lock.list_questions()
@@ -643,7 +614,7 @@ if __name__ == "__main__":
             print("\nFeatures:")
             print("  - Lock PC at configurable intervals")
             print("  - Answer questions to unlock")
-            print("  - Support for images (file or URL)")
+            print("  - Support for images from local files")
             print("  - Support for alert messages")
             sys.exit(0)
         else:

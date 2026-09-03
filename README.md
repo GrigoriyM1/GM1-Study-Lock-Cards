@@ -1,4 +1,3 @@
-
 # 🃏 GM1 Study Lock Cards
 
 > Lock your PC, unlock with knowledge. Study while you work! 🧠💻
@@ -35,7 +34,7 @@ A productivity tool that locks your PC at configurable intervals and requires yo
 |---------|-------------|
 | 🕒 **Smart Locking** | Locks PC at configurable intervals (default: 30 min) |
 | 📝 **Card System** | Answer questions (cards) to unlock your PC |
-| 🖼️ **Rich Media** | Add images to questions (file or URL) |
+| 🖼️ **Local Images** | Add images from your computer to questions |
 | 🔔 **Smart Alerts** | Show hints or additional info with questions |
 | 🧪 **Test Mode** | Preview the lock before committing |
 | ⚡ **Immediate Lock** | Lock instantly on demand |
@@ -48,8 +47,8 @@ A productivity tool that locks your PC at configurable intervals and requires yo
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/gm1-study-lock-cards.git
-cd gm1-study-lock-cards
+git clone https://github.com/GrigoriyM1/GM1-Study-Lock-Cards.git
+cd GM1-Study-Lock-Cards
 ```
 
 ### 2. Install dependencies
@@ -78,7 +77,7 @@ MENU:
 1. Start lock (with test lock)      ← Test then lock
 2. Start lock immediately            ← Lock NOW, ask questions
 3. Add question without image        ← Add text-only card
-4. Add question with image           ← Add card with image
+4. Add question with image (file)    ← Add card with local image
 5. Remove question                   ← Delete a card
 6. Show all questions                ← View all cards
 7. Change interval (in minutes)      ← Adjust lock time
@@ -99,12 +98,7 @@ MENU:
 
 ### Card with Image (from file)
 ```
-Choose option 4 → 1. File path → C:\Users\Admin\Pictures\cat.jpg
-```
-
-### Card with Image (from URL)
-```
-Choose option 4 → 2. URL → https://example.com/cat.jpg
+Choose option 4 → Enter image file path: C:\Users\Admin\Pictures\cat.jpg
 ```
 
 ### Card with Alert (hint)
@@ -123,8 +117,9 @@ Choose option 4 → 2. URL → https://example.com/cat.jpg
 | Source | Format | Example |
 |--------|--------|---------|
 | 📁 File | `.jpg`, `.png`, `.gif`, `.bmp`, `.webp` | `C:\Pictures\cat.jpg` |
-| 🌐 URL | Any image URL | `https://example.com/cat.jpg` |
-| 📦 Base64 | Embedded images | `data:image/jpeg;base64,/9j/...` |
+| 📦 Base64 | Embedded images (auto-converted) | Stored in `questions.json` |
+
+> **Note:** Images are embedded into `questions.json` as base64, so they work even if the original file is moved or deleted.
 
 ---
 
@@ -161,7 +156,7 @@ python study_lock.py --autostart 45
 ## 📁 Project Structure
 
 ```
-gm1-study-lock-cards/
+GM1-Study-Lock-Cards/
 ├── study_lock.py          # Main application
 ├── questions.json         # Cards database (auto-generated)
 ├── requirements.txt       # Python dependencies
@@ -212,7 +207,7 @@ If you forget your answers:
 | `ModuleNotFoundError: No module named 'win32gui'` | `pip install pywin32` |
 | `ModuleNotFoundError: No module named 'PIL'` | `pip install Pillow` |
 | Window doesn't appear | Run as administrator |
-| Images not loading | Check file path or URL accessibility |
+| Image not loading | Check file path exists and is accessible |
 
 ---
 
@@ -237,5 +232,3 @@ If you find this project useful, please consider:
 ---
 
 **Happy studying! 📚✨**
-
-
