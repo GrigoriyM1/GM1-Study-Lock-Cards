@@ -5,7 +5,6 @@ import os
 import sys
 import threading
 from datetime import datetime
-import ctypes
 import win32gui
 import win32con
 from PIL import Image, ImageTk
@@ -135,7 +134,7 @@ class StudyLock:
             print(f"Error loading image: {e}")
             return None
     
-    def create_lock_window(self, test_mode=False):
+    def create_lock_window(self, test_mode=False, gatekeeper_mode=False):
         """Create lock window with support for images and alerts"""
         import tkinter as tk
         from tkinter import messagebox
@@ -151,6 +150,8 @@ class StudyLock:
         
         if test_mode:
             self.lock_window.title("TEST LOCK")
+        elif gatekeeper_mode:
+            self.lock_window.title("GATEKEEPER - ANSWER TO CONTINUE")
         else:
             self.lock_window.title("ANSWER REQUIRED!")
             
@@ -176,6 +177,9 @@ class StudyLock:
         if test_mode:
             title_text = "TEST LOCK\n\nAnswer the question to verify the system"
             title_color = '#27ae60'
+        elif gatekeeper_mode:
+            title_text = "🔐 GATEKEEPER\n\nAnswer the question to continue"
+            title_color = '#e74c3c'
         else:
             title_text = "Time to study!\n\nAnswer the question to continue working"
             title_color = '#f39c12'
@@ -264,11 +268,11 @@ class StudyLock:
         """Prevent window closing"""
         pass
     
-    def show_lock_window(self, test_mode=False):
+    def show_lock_window(self, test_mode=False, gatekeeper_mode=False):
         """Show lock window and wait for answer"""
         self.answer_correct = False
         self.waiting_for_answer = True
-        self.create_lock_window(test_mode)
+        self.create_lock_window(test_mode, gatekeeper_mode)
         
         if self.lock_window:
             # Run Tkinter main loop for this window
@@ -326,30 +330,35 @@ class StudyLock:
             print(f"{i:2d}. {question_text:<65} -> {q['answer']:>10} [image: {has_image}] [alert: {has_alert}]")
         print("="*60)
     
-    def block_system(self, test_mode=False):
+    def block_system(self, test_mode=False, gatekeeper_mode=False):
         """Block the system"""
         self.is_locked = True
         
         if test_mode:
             print(f"[{datetime.now().strftime('%H:%M:%S')}] TEST lock!")
+        elif gatekeeper_mode:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] GATEKEEPER mode - single question!")
         else:
             print(f"[{datetime.now().strftime('%H:%M:%S')}] System locked!")
         
-        if not test_mode:
+        if not test_mode and not gatekeeper_mode:
             self.minimize_all_windows()
         
         # Show window and wait for answer
-        self.show_lock_window(test_mode)
+        self.show_lock_window(test_mode, gatekeeper_mode)
         
         # After window closes
         self.is_locked = False
         
         if self.answer_correct:
-            if not test_mode:
+            if test_mode:
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] Test passed successfully!")
+            elif gatekeeper_mode:
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] Gatekeeper passed! Exiting...")
+                sys.exit(0)
+            else:
                 print(f"[{datetime.now().strftime('%H:%M:%S')}] Correct answer! Lock removed.")
                 self.start_timer()
-            else:
-                print(f"[{datetime.now().strftime('%H:%M:%S')}] Test passed successfully!")
             return True
         else:
             return False
@@ -378,6 +387,38 @@ class StudyLock:
         self.timer_thread.start()
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Timer started. Next lock in {self.lock_time//60} minutes")
 
+def gatekeeper_mode(minutes=30):
+    """Single question mode - show one card and exit"""
+    print("="*60)
+    print("GATEKEEPER MODE - Single question")
+    print("="*60)
+    
+    lock = StudyLock(lock_time=minutes * 60)
+    
+    # Load questions from questions.json
+    if os.path.exists("questions.json"):
+        try:
+            with open("questions.json", 'r', encoding='utf-8') as f:
+                loaded = json.load(f)
+                if loaded and len(loaded) > 0:
+                    lock.questions = loaded
+                    print(f"✅ Loaded {len(loaded)} questions from questions.json")
+                else:
+                    print("⚠️ questions.json is empty, using default question")
+                    lock.add_question("1+1", "2", alert="The answer is 2!")
+        except Exception as e:
+            print(f"⚠️ Error loading questions.json: {e}")
+            lock.add_question("1+1", "2", alert="The answer is 2!")
+    else:
+        print("⚠️ questions.json not found, creating default question")
+        lock.add_question("1+1", "2", alert="The answer is 2!")
+    
+    # Show single question
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Showing question...")
+    lock.block_system(gatekeeper_mode=True)
+    
+    # This point is never reached because sys.exit(0) is called in block_system
+
 def auto_start_with_test(minutes=30):
     """Automatic startup with test lock and custom interval"""
     print("="*60)
@@ -388,7 +429,7 @@ def auto_start_with_test(minutes=30):
     
     lock = StudyLock(lock_time=minutes * 60)
     
-    # ✅ ГАРАНТИРУЕМ, что используем questions.json
+    # Load questions from questions.json
     if os.path.exists("questions.json"):
         try:
             with open("questions.json", 'r', encoding='utf-8') as f:
@@ -438,8 +479,8 @@ def main():
     while True:
         try:
             print("\nMENU:")
-            print("1. Start lock (with test lock)")
-            print("2. Start lock")
+            print("1. Gatekeeper mode (one question and exit)")
+            print("2. Start lock (with timer)")
             print("3. Add question without image")
             print("4. Add question with image (file only)")
             print("5. Remove question")
@@ -450,51 +491,49 @@ def main():
             choice = input("\nChoose action (1-8): ").strip()
             
             if choice == "1":
+                # GATEKEEPER MODE - один вопрос и выход
+                print("\n🔐 GATEKEEPER MODE")
+                print("─"*60)
+                
+                # Создаем новый объект для Gatekeeper
+                gatekeeper_lock = StudyLock(lock_time=1800)
+                
+                # Загружаем вопросы из questions.json
+                if os.path.exists("questions.json"):
+                    try:
+                        with open("questions.json", 'r', encoding='utf-8') as f:
+                            loaded = json.load(f)
+                            if loaded and len(loaded) > 0:
+                                gatekeeper_lock.questions = loaded
+                                print(f"✅ Loaded {len(loaded)} questions from questions.json")
+                            else:
+                                print("⚠️ questions.json is empty, using default question")
+                                gatekeeper_lock.add_question("1+1", "2", alert="The answer is 2!")
+                    except Exception as e:
+                        print(f"⚠️ Error loading questions.json: {e}")
+                        gatekeeper_lock.add_question("1+1", "2", alert="The answer is 2!")
+                else:
+                    print("⚠️ questions.json not found, creating default question")
+                    gatekeeper_lock.add_question("1+1", "2", alert="The answer is 2!")
+                
+                # Показываем один вопрос и выходим
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] Showing question...")
+                gatekeeper_lock.block_system(gatekeeper_mode=True)
+                # После правильного ответа программа завершится (sys.exit(0) в block_system)
+                    
+            elif choice == "2":
                 try:
                     minutes = input("Enter interval in minutes (default 30): ").strip()
                     if minutes:
                         minutes = int(minutes)
                     else:
                         minutes = 30
-                    print(f"\nStarting lock with test... Interval: {minutes} minutes")
-                    print(f"First test lock, then regular every {minutes} minutes.")
-                    print("-"*60)
                     
-                    lock.lock_time = minutes * 60
-                    lock.start_timer()
-                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Starting test lock...")
-                    time.sleep(2)
-                    lock.block_system(test_mode=True)
-                    
-                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Test passed! Continue working.")
-                    print(f"Next lock in {minutes} minutes.")
-                    print("Program is running in background. Do not close this window.")
-                    print("Press Ctrl+C to stop")
-                    print("-"*60)
-                    
-                    try:
-                        while True:
-                            time.sleep(1)
-                    except KeyboardInterrupt:
-                        print("\n\nLock stopped! Returning to menu...")
-                        continue
-                except ValueError:
-                    print("Invalid input! Please enter a number.")
-                    
-            elif choice == "2":
-                try:
-                    minutes = input("Enter interval in minutes for auto-lock (default 30): ").strip()
-                    if minutes:
-                        minutes = int(minutes)
-                    else:
-                        minutes = 30
-                    
-                    # Set the lock time
                     lock.lock_time = minutes * 60
                     
                     # Show lock immediately
-                    print(f"\nShowing lock immediately!")
-                    print(f"After answering correctly, next lock will be in {minutes} minutes.")
+                    print(f"\nStarting lock! Interval: {minutes} minutes")
+                    print(f"Lock will appear every {minutes} minutes.")
                     print("-"*60)
                     
                     # Block the system immediately
@@ -601,16 +640,28 @@ if __name__ == "__main__":
                     auto_start_with_test(30)
             else:
                 auto_start_with_test(30)
+        elif arg == "--gatekeeper" or arg == "/gatekeeper":
+            # Check if minutes parameter is provided (for default question if needed)
+            if len(sys.argv) > 2:
+                try:
+                    minutes = int(sys.argv[2])
+                    gatekeeper_mode(minutes)
+                except ValueError:
+                    print("Invalid minutes value. Using default 30 minutes.")
+                    gatekeeper_mode(30)
+            else:
+                gatekeeper_mode(30)
         elif arg == "--help" or arg == "-h":
             print("Study Lock - A productivity tool that locks your PC with questions")
             print("\nUsage:")
             print("  python study_lock.py                      - Run in interactive mode")
             print("  python study_lock.py --autostart [minutes] - Run automatically with test lock")
+            print("  python study_lock.py --gatekeeper         - Show one question and exit")
             print("  python study_lock.py --help               - Show this help message")
             print("\nExamples:")
             print("  python study_lock.py --autostart          - Start with default 30 minutes")
             print("  python study_lock.py --autostart 15       - Start with 15 minutes interval")
-            print("  python study_lock.py --autostart 45       - Start with 45 minutes interval")
+            print("  python study_lock.py --gatekeeper         - Show one question and close everything")
             print("\nFeatures:")
             print("  - Lock PC at configurable intervals")
             print("  - Answer questions to unlock")

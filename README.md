@@ -38,6 +38,7 @@ A productivity tool that locks your PC at configurable intervals and requires yo
 | 🔔 **Smart Alerts** | Show hints or additional info with questions |
 | 🧪 **Test Mode** | Preview the lock before committing |
 | ⚡ **Immediate Lock** | Lock instantly on demand |
+| 🔐 **Gatekeeper Mode** | Answer one question before launching any app |
 | ⌨️ **Keyboard Shortcuts** | `Ctrl+C` returns to menu, `Enter` submits answer |
 | 📦 **JSON Storage** | All questions stored in simple JSON format |
 
@@ -66,7 +67,43 @@ python study_lock.py --autostart
 
 # Auto-start with custom interval (15 min)
 python study_lock.py --autostart 15
+
+# Gatekeeper mode (one question and exit)
+python study_lock.py --gatekeeper
 ```
+
+---
+
+## 🔐 Gatekeeper Mode - Protect Any App
+
+Gatekeeper mode allows you to "protect" any application with a question. When you launch the app, a question appears first. Only after answering correctly, the app opens.
+
+### How to set up:
+
+1. **Find the shortcut** of the app you want to protect (e.g., browser, game, IDE)
+
+2. **Right-click** on the shortcut and select **`Properties`**
+
+   ![Properties](doc1.png)
+
+3. Go to the **`Shortcut`** tab and find the **`Target`** field
+
+4. **Do NOT delete** the existing path. Instead:
+   - Add the path to `gatekeeper.bat` at the beginning
+   - Add a space
+   - Keep the original app path at the end (in quotes if it has spaces)
+
+   ![Target field](doc2.png)
+
+   **Example:**
+   ```
+   Before: "C:\Program Files\Google\Chrome\Application\chrome.exe"
+   After:  "C:\Users\Admin\GM1-Study-Lock-Cards\gatekeeper.bat" "C:\Program Files\Google\Chrome\Application\chrome.exe"
+   ```
+
+5. Click **`OK`** to save
+
+Now whenever you double-click that shortcut, you'll see a question first. Answer correctly and the app will launch!
 
 ---
 
@@ -90,14 +127,14 @@ Make GM1 Study Lock Cards start automatically when your computer turns on:
 
 ```
 MENU:
-1. Start lock (with test lock)      ← Test then lock
-2. Start lock immediately            ← Lock NOW, ask questions
-3. Add question without image        ← Add text-only card
-4. Add question with image (file)    ← Add card with local image
-5. Remove question                   ← Delete a card
-6. Show all questions                ← View all cards
-7. Change interval (in minutes)      ← Adjust lock time
-8. Exit                              ← Close program
+1. Gatekeeper mode (one question and exit)  ← Show 1 question, then exit
+2. Start lock (with timer)                  ← Lock NOW, then repeat every N min
+3. Add question without image               ← Add text-only card
+4. Add question with image (file only)      ← Add card with local image
+5. Remove question                          ← Delete a card
+6. Show all questions                       ← View all cards
+7. Change interval (in minutes)             ← Adjust lock time
+8. Exit                                     ← Close program
 ```
 
 ---
@@ -164,7 +201,9 @@ python study_lock.py --autostart
 
 # Auto-start with custom interval
 python study_lock.py --autostart 15
-python study_lock.py --autostart 45
+
+# Gatekeeper mode (one question and exit)
+python study_lock.py --gatekeeper
 ```
 
 ---
@@ -175,10 +214,13 @@ python study_lock.py --autostart 45
 GM1-Study-Lock-Cards/
 ├── study_lock.py              # Main application
 ├── study_lock_autostart.bat   # Auto-start batch file for Windows
+├── gatekeeper.bat             # Gatekeeper mode launcher
 ├── questions.json             # Cards database (auto-generated)
 ├── requirements.txt           # Python dependencies
 ├── README.md                  # Documentation
-└── .gitignore                 # Git ignore file
+├── .gitignore                 # Git ignore file
+├── doc1.png                   # Screenshot: Properties menu
+└── doc2.png                   # Screenshot: Target field
 ```
 
 ---
@@ -212,6 +254,7 @@ If you forget your answers:
 - 📚 **Language Learners** — Practice vocabulary
 - 🧪 **Test Preparation** — Quiz yourself before exams
 - 🧠 **Memory Training** — Strengthen recall ability
+- 🎮 **Gamers** — Answer a question before launching a game
 
 ---
 
@@ -225,6 +268,7 @@ If you forget your answers:
 | `ModuleNotFoundError: No module named 'PIL'` | `pip install Pillow` |
 | Window doesn't appear | Run as administrator |
 | Image not loading | Check file path exists and is accessible |
+| Gatekeeper doesn't launch app | Check the path in Target field is correct |
 
 ---
 
