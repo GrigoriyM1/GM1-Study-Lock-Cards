@@ -70,6 +70,22 @@ python study_lock.py --autostart 15
 
 ---
 
+## 🔄 Auto-Start on Windows Boot
+
+Make GM1 Study Lock Cards start automatically when your computer turns on:
+
+1. Press `Win + R`, type `shell:startup`, press Enter
+2. Copy `study_lock_autostart.bat` into this folder
+3. Done! The program will launch automatically on each boot
+
+> **Note:** The `.bat` file runs with `pythonw.exe`, so it works silently in the background — no console window appears.
+
+### To remove from auto-start:
+- Delete the `.bat` file from the Startup folder
+- Or use Task Manager → Startup tab to disable it
+
+---
+
 ## 🎮 Menu Options
 
 ```
@@ -157,11 +173,12 @@ python study_lock.py --autostart 45
 
 ```
 GM1-Study-Lock-Cards/
-├── study_lock.py          # Main application
-├── questions.json         # Cards database (auto-generated)
-├── requirements.txt       # Python dependencies
-├── README.md             # Documentation
-└── .gitignore            # Git ignore file
+├── study_lock.py              # Main application
+├── study_lock_autostart.bat   # Auto-start batch file for Windows
+├── questions.json             # Cards database (auto-generated)
+├── requirements.txt           # Python dependencies
+├── README.md                  # Documentation
+└── .gitignore                 # Git ignore file
 ```
 
 ---
